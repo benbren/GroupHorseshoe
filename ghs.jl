@@ -25,14 +25,16 @@ function ghs(X, y, group, burnins, draws)
     while it < iterations
 
         # Update λ and a_λ #
-        
+
         alam = [rand(InverseGamma(1, 1 + 1/lam[i]),1) for i in 1:q]; 
+
         alam = reduce(vcat,alam)
 
         lam = [rand(InverseGamma(1, 1 / alam[i] + (beta[i]^2)/(2*sigma2*tau2*gam[i])),1) for i in 1:q]; 
         lam = reduce(vcat,lam)
         
         # Update γ and a_γ # 
+    
         k = 1 
         agam_next = []
         gam_next = []
@@ -40,7 +42,7 @@ function ghs(X, y, group, burnins, draws)
         for i in g_sizes  
            m = i + (k-1);
            beta_sum = sum(beta_over_lam[k:m]);
-           append!(gam_next, repeat(rand(InverseGamma(0.5*(i + 1),1/agam[k] + beta_sum / (2*sigma2*tau2)),1),i));
+           append!(gam_next, repeat(rand(InverseGamma((i + 1)/2,1/agam[k] + beta_sum / (2*sigma2*tau2)),1),i));
            append!(agam_next, repeat(rand(InverseGamma(1, 1 + 1/gam_next[k]),1), i));
            k = k + i ;
         end 
@@ -49,7 +51,7 @@ function ghs(X, y, group, burnins, draws)
         gam = reduce(vcat,gam_next)
 
         atau = reduce(vcat,rand(InverseGamma(1, 1 + 1/tau2),1)); 
-        tau2 = rand(InverseGamma(0.5*(q+1), 1 / atau + 0.5*sum((beta.^2) ./(lam.*gam))/sigma2),1)
+        tau2 = rand(InverseGamma((q+1) / 2 , 1 / atau + 0.5*sum((beta.^2) ./(lam.*gam))/sigma2),1)
         tau2 = reduce(vcat, tau2)
        
        
@@ -60,15 +62,16 @@ function ghs(X, y, group, burnins, draws)
         end 
 
         Λ = diagm(convert(Vector{Float64},lamdiag));
-
-        A = transpose(X)*X + inv(Λ.*tau2);
+        Λ_inv = diagm(1 ./ convert(Vector{Float64},lamdiag))
+        A = transpose(X)*X + Λ_inv;
         R = cholesky(A);
-        b = inv(R)*transpose(X)*y;
+        mu = transpose(X)*y; 
+        b = R \ mu;
         z = rand(Normal(0,sqrt(sigma2)),q);
-        beta = inv(R)*(z + b);
+        beta = R \ (z + b);
         err = y - X*beta;
 
-        sigma2 = reduce(vcat,rand(InverseGamma(0.5*(n + q), 0.5*(dot(err,err) + (transpose(beta)*inv(Λ.*tau2)*beta)[1])), 1));
+        sigma2 = reduce(vcat,rand(InverseGamma(0.5*(n + q), 0.5*(dot(err,err) + (transpose(beta)*Λ_inv*beta)[1])), 1));
         print(it);
         print("\n")
         it += 1 ;
