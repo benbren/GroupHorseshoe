@@ -1,0 +1,1 @@
+Analysis of scalar on network regression using the horseshoe and the grouphorseshoe prior (novel). Julia Gibbs sampler implementations are presented to speed up the analysis as are R scripts to perfrom the Gibbs sampling. 
