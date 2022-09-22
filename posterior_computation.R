@@ -490,6 +490,7 @@ group_horseshoe_gibs_groups <- function(burn_ins,
 
     
     it <- it + 1
+    print(it)
     
     
     
@@ -503,7 +504,6 @@ group_horseshoe_gibs_groups <- function(burn_ins,
   
   K = mean(tau_vec)*diag(LAMBDA_diag) %*% solve(MASS::ginv(XtX) + mean(tau_vec)*diag(LAMBDA_diag))
   ev = eigen(K)
-  
   
   return(
     list(
@@ -524,6 +524,8 @@ group_horseshoe_gibs_groups <- function(burn_ins,
     )
   )
 }
+
+
 
 
 
