@@ -31,7 +31,11 @@ Function to perform the horseshoe Gibbs Sampler with grouped data (from a networ
     sigma2 = 1; 
     iterations = burnins + draws ;
     g_sizes = [sum(group .== i) for i in 1:maximum(group)]; 
-    posteriors = zeros(q)';
+    posteriors = zeros(draws,q);
+    gams_p = zeros(draws,q);
+    lams_p = zeros(draws,q);
+    tau_p = zeros(draws);
+    draw_num = 1 
     it = 1 ;
     while it < iterations
 
@@ -62,7 +66,7 @@ Function to perform the horseshoe Gibbs Sampler with grouped data (from a networ
            agam[k:m] .= reduce(vcat,rand(InverseGamma(1, agam_scale)))
            k = k + i ;
        end 
-       
+
         # Update τ  ##### 
 
         lamgam = lam .* gam
@@ -92,7 +96,11 @@ Function to perform the horseshoe Gibbs Sampler with grouped data (from a networ
 
         sigma2 = reduce(vcat,rand(InverseGamma(0.5*(n + q), sigmascale)));
         if it > burnins
-            posteriors = vcat(posteriors,beta'); 
+            posteriors[draw_num,:] = beta; 
+            gams_p[draw_num,:] = gam
+            lams_p[draw_num,:] = lam 
+            tau_p[draw_num] = tau2
+            draw_num += 1 
         end 
 
 
@@ -105,8 +113,11 @@ Function to perform the horseshoe Gibbs Sampler with grouped data (from a networ
     end 
 
     posterior_pe  = mean(posteriors, dims = 1)
+    p_gam  = mean(gams_p, dims = 1)
+    p_lam  = mean(lams_p, dims = 1)
+    p_tau = mean(tau_p)
 
-    return posterior_pe
+    return posterior_pe, p_gam, p_lam, p_tau
 end
 
 
