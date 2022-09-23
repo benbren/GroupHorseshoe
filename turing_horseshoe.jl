@@ -15,20 +15,37 @@ Turing.setrdcache(true)
 
 
 @model function(m::HP)(::Val{:Ungrouped})
-    X = m.X 
-    q = size(X,2)
-    halfcauchy = truncated(Cauchy(0,1); lower = 0)
-    τ ~ halfcauchy
-    λ ~ filldist(halfcauchy, q)
-    σ ~ Exponential(1)
-    β ~ MvNormal(zeros(q), Diagonal((λ .* (τ*σ).^2)))
 
+    X = Matrix(m.X) 
+    q = size(X,2)
+
+    # Latent parameters 
+    v ~ filldist(InverseGamma(0.5, 1), q) 
+    eps ~ InverseGamma(0.5,1)
+
+    # Global and local shrinkage parameters 
+    τ2 ~ InverseGamma(0.5, eps^(-1))
+    λ2 = Vector{Float64}(undef, q)
+
+    for i in 1:q 
+        λ2[i] ~ InverseGamma(0.5, v[i]^(-1))
+    end   
+
+    # Random Noise 
+    σ ~ Exponential(1) # Good ole jeffs prior on σ
+
+    # Regression parameters 
+    β ~ MvNormal(zeros(q), Diagonal(λ2 .* (τ2*(σ^2))))
+
+    # Modeling
     y ~ MvNormal(X*β, σ^2 * I)
 
-    return(; τ , λ, β, σ, y)
+    return(; τ2, λ2, β, σ, y)
+
 end 
 
 @model function(m::HP)(::Val{:Grouped}, group = NaN) # TODO: How do I assign this group? 
+        # TODO: Update to conditional InverseGamma model 
 
     X = m.X 
     q = size(X,2)
@@ -62,7 +79,7 @@ model_un = HP(X)(Val(:Ungrouped));
 
 model_y_un = model_un| (; y)
 
-samps_un = sample(model_y, NUTS(), MCMCThreads(), 2_000, 2)
+samps_un = sample(model_un, NUTS(), MCMCThreads(), 2_000, 2)
 
 model = HP(X)(Val(:Grouped), g); 
 
